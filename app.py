@@ -7,105 +7,47 @@ import plotly.express as px
 
 PATH = pathlib.Path(__file__).parent
 DATA_PATH = PATH.joinpath('data').resolve()
+df = pd.read_feather('data/financials.feather')
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],
-                meta_tags=[{'name': 'viewport', 'content':'width=device-with'}])
+app = Dash(__name__, external_stylesheets=[dbc.themes.JOURNAL])
 app.title = 'Financial Analysis'
 
-df = pd.read_feather('data/financials.feather')
-ticker_options = [{'label': str(ticker), 'value': str(ticker)}
-                  for ticker in df['Ticker'].unique()]
-
-
-my_container = html.Div([
-    html.H1('Layout'),
-    dbc.Col([], width=2),
-    dbc.Row([dbc.Col([dcc.Dropdown(df['Ticker'].unique(),
-                                   id='ticker-dropdown')], width=2)]),
-    dbc.Row([dbc.Col([dcc.Graph(id='ticker-graph1')])])
-], style={'margin-left': '18rem'})
-
-"""
-This app creates a simple sidebar layout using inline style arguments and the
-dbc.Nav component.
-
-dcc.Location is used to track the current location, and a callback uses the
-current location to render the appropriate page content. The active prop of
-each NavLink is set automatically according to the current pathname. To use
-this feature you must install dash-bootstrap-components >= 0.11.0.
-
-For more details on building multi-page Dash applications, check out the Dash
-documentation: https://dash.plot.ly/urls
-"""
-
-# the style arguments for the sidebar. We use position:fixed and a fixed width
-SIDEBAR_STYLE = {
-    "position": "fixed",
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
-    "width": "16rem",
-    "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
-}
-
-# the styles for the main content position it to the right of the sidebar and
-# add some padding.
-CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
-    "padding": "2rem 1rem",
-}
-
-sidebar = html.Div(
-    [
-        html.H2("Sidebar", className="display-4"),
-        html.Hr(),
-        html.P(
-            "A simple sidebar layout with navigation links", className="lead"
-        ),
-        dbc.Nav(
-            [
-                dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Page 1", href="/page-1", active="exact"),
-                dbc.NavLink("Page 2", href="/page-2", active="exact"),
+navbar = dbc.NavbarSimple(
+    children=[
+        dbc.NavItem(dbc.NavLink("Home", href="#")),
+        dbc.DropdownMenu(
+            children=[
+                dbc.DropdownMenuItem("More pages", header=True),
+                dbc.DropdownMenuItem("Page 2", href="#"),
+                dbc.DropdownMenuItem("Page 3", href="#"),
             ],
-            vertical=True,
-            pills=True,
+            nav=True,
+            in_navbar=True,
+            label="More",
         ),
     ],
-    style=SIDEBAR_STYLE,
+    brand="Financial Analysis",
+    brand_href="#",
+    color="primary",
+    dark=True,
 )
 
-content = html.Div(id="page-content", style=CONTENT_STYLE)
+app.layout = html.Div([
+    navbar,
+    html.Div(children=[
+        html.Hr(),
+        html.Label('Tickers: '),
+        dcc.Dropdown(df['Ticker'].unique(), id='ticker-dropdown', value='AAPL', style={'width':'120px'}),
+        html.Br(),
+        dcc.Graph('figure1'),
+        dbc.Button('Button')
+    ], style={'margin-left':'10px'})
+])
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content, my_container])
 
-
-@app.callback(Output('ticker-graph1', 'figure'), Input('ticker-dropdown', 'value'))
-def render_ticker_graph1(ticker):
-    mask = df['Ticker'] == ticker
-    tmp = df[mask]
-    return px.bar(tmp, x='Year', y='Revenues')
-
-
-@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
-def render_page_content(pathname):
-    if pathname == "/":
-        return (html.P("This is the content of the home page!"), my_container)
-
-    elif pathname == "/page-1":
-        return html.P("This is the content of page 1. Yay!")
-    elif pathname == "/page-2":
-        return html.P("Oh cool, this is page 2!")
-    # If the user tries to reach a different page, return a 404 message
-    return dbc.Jumbotron(
-        [
-            html.H1("404: Not found", className="text-danger"),
-            html.Hr(),
-            html.P(f"The pathname {pathname} was not recognised..."),
-        ]
-    )
+@app.callback(Output('figure1', 'figure'), Input('ticker-dropdown', 'value'))
+def render_figure1(ticker):
+    return px.bar(df[df['Ticker']==ticker], x='Year', y='Revenues')
 
 
 if __name__ == "__main__":
