@@ -18,10 +18,12 @@ ticker_options = [{'label': str(ticker), 'value': str(ticker)}
 
 
 my_container = html.Div([
-        dbc.Col([], width=2),
-        dbc.Row([dbc.Col([dcc.Dropdown(df['Ticker'].unique(), id='ticker-dropdown')], width=2)]),
-        dbc.Row([dbc.Col([dcc.Graph(id='ticker-graph1')])])
-        ], style={'margin-left': '18rem'})
+    html.H1('Layout'),
+    dbc.Col([], width=2),
+    dbc.Row([dbc.Col([dcc.Dropdown(df['Ticker'].unique(),
+                                   id='ticker-dropdown')], width=2)]),
+    dbc.Row([dbc.Col([dcc.Graph(id='ticker-graph1')])])
+], style={'margin-left': '18rem'})
 
 """
 This app creates a simple sidebar layout using inline style arguments and the
