@@ -18,23 +18,23 @@ search_navbar = dbc.Navbar(
     dbc.Container(
         [
             dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
-            dbc.Col(dbc.NavbarBrand("Logo")),
+            dbc.Col(dbc.NavbarBrand("Financial Dashboard")),
             #dbc.NavbarBrand("Search", href="#"),
             dbc.NavbarToggler(id="navbar-toggler3"),
             dbc.Collapse(
                 dbc.Row(
                     [
                         dbc.Col(
-                            dbc.Select(id='ticker-dropdown', options=tickers_options, value='AAPL'),
+                            dbc.Select(id='ticker-dropdown', options=tickers_options, value='AMD')
                         ),
-                        dbc.Col(
-                            dbc.Button(
-                                "Search", color="primary", className="ms-2"
-                            ),
-                            # set width of button column to auto to allow
-                            # search box to take up remaining space.
-                            width="auto",
-                        ),
+#                        dbc.Col(
+#                            dbc.Button(
+#                                "Search", color="primary", className="ms-2"
+#                            ),
+#                            # set width of button column to auto to allow
+#                            # search box to take up remaining space.
+#                            width="auto",
+#                        ),
                     ],
                     # add a top margin to make things look nice when the navbar
                     # isn't expanded (mt-3) remove the margin on medium or
@@ -59,12 +59,11 @@ app.title = 'Financial Analysis'
 app.layout = html.Div([
     search_navbar,
     html.Div(children=[
-        dcc.Dropdown(df.columns[12:], id='metric-dropdown'),
+        dcc.Dropdown(df.columns[13:], id='metric-dropdown', placeholder='Select a metric'),
         html.Br(),
         dcc.Graph(id='figure1'),
         html.Hr(),
         dcc.Graph(id='price-graph'),
-        dbc.Button('Button')
     ], style={'margin-left':'10px'})
 ])
 
@@ -77,7 +76,7 @@ def render_figure1(ticker, metric):
     fig1.update_xaxes(range=[2000,2020], title_text='')
     fig1.update_yaxes(title_text='')
     price_fig = px.line(price, x='Date', y='Adj Close', log_y=True)
-    price_fig.update_yaxes(tickformat='.2f', tickprefix='$', title_text='')
+    price_fig.update_yaxes(tickformat='.2f', title_text='')
     price_fig.update_xaxes(title_text='Year')
     return fig1, price_fig
 
