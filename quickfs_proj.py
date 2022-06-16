@@ -4,6 +4,7 @@ from quickfs import QuickFS
 from dash import Dash, html, dcc, Input, Output, dash_table
 import pandas as pd
 import plotly.express as px
+#import dash_table as dt
 
 load_dotenv()
 
@@ -15,8 +16,9 @@ load_dotenv()
 #print(f'Current usage total: {resp}')
 #nyse = client.get_supported_companies('US', 'NYSE')
 df = pd.read_pickle('data/clean_annual.pickle')
-industries = df['industry'].dropna().unique()
-metrics = list(df.columns)
+df['ppe_/_da'] = df['cfi_ppe_purchases'] * -1 / df['cfo_da']
+industries = df['industry'].sort_values().dropna().unique()
+metrics = list(df.columns[9:])
 
 app = Dash(__name__)
 app.layout = html.Div([
@@ -24,7 +26,7 @@ app.layout = html.Div([
                   for tick in industries], id='industry-dropdown', value='Banks'),
     dcc.Dropdown([{'label':metric, 'value':metric}
                   for metric in metrics], id='metric-dropdown', value='revenue'),
-    dcc.Graph(id='bar-fig')
+    dcc.Graph(id='bar-fig'),
 ])
 
 
