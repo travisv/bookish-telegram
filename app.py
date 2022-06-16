@@ -3,108 +3,98 @@ import pathlib
 from dash import Dash, Input, Output, dcc, html
 import dash_bootstrap_components as dbc
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import yfinance as yf
 
 
+PLOTLY_LOGO = "https://images.plot.ly/logo/new-branding/plotly-logomark.png"
 PATH = pathlib.Path(__file__).parent
 DATA_PATH = PATH.joinpath('data').resolve()
+df = pd.read_feather('/Users/travis/bookish-telegram/data/financials.feather')
+tickers_options = [{'label':tick, 'value':tick} for tick in df['Ticker'].unique()]
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],
-                meta_tags=[{'name': 'viewport', 'content':'width=device-with'}])
-app.title = 'Financial Analysis'
-
-df = pd.read_feather('data/financials.feather')
-ticker_options = [{'label': str(ticker), 'value': str(ticker)}
-                  for ticker in df['Ticker'].unique()]
-
-
-my_container = html.Div([
-        dbc.Col([], width=2),
-        dbc.Row([dbc.Col([dcc.Dropdown(df['Ticker'].unique(), id='ticker-dropdown')], width=2)]),
-        dbc.Row([dbc.Col([dcc.Graph(id='ticker-graph1')])])
-        ], style={'margin-left': '18rem'})
-
-"""
-This app creates a simple sidebar layout using inline style arguments and the
-dbc.Nav component.
-
-dcc.Location is used to track the current location, and a callback uses the
-current location to render the appropriate page content. The active prop of
-each NavLink is set automatically according to the current pathname. To use
-this feature you must install dash-bootstrap-components >= 0.11.0.
-
-For more details on building multi-page Dash applications, check out the Dash
-documentation: https://dash.plot.ly/urls
-"""
-
-# the style arguments for the sidebar. We use position:fixed and a fixed width
-SIDEBAR_STYLE = {
-    "position": "fixed",
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
-    "width": "16rem",
-    "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
-}
-
-# the styles for the main content position it to the right of the sidebar and
-# add some padding.
-CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
-    "padding": "2rem 1rem",
-}
-
-sidebar = html.Div(
-    [
-        html.H2("Sidebar", className="display-4"),
-        html.Hr(),
-        html.P(
-            "A simple sidebar layout with navigation links", className="lead"
-        ),
-        dbc.Nav(
-            [
-                dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Page 1", href="/page-1", active="exact"),
-                dbc.NavLink("Page 2", href="/page-2", active="exact"),
-            ],
-            vertical=True,
-            pills=True,
-        ),
-    ],
-    style=SIDEBAR_STYLE,
+search_navbar = dbc.Navbar(
+    dbc.Container(
+        [
+            dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
+            dbc.Col(dbc.NavbarBrand("Financial Dashboard")),
+            #dbc.NavbarBrand("Search", href="#"),
+            dbc.NavbarToggler(id="navbar-toggler3"),
+            dbc.Collapse(
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dbc.Select(id='ticker-dropdown', options=tickers_options, value='AMD')
+                        ),
+#                        dbc.Col(
+#                            dbc.Button(
+#                                "Search", color="primary", className="ms-2"
+#                            ),
+#                            # set width of button column to auto to allow
+#                            # search box to take up remaining space.
+#                            width="auto",
+#                        ),
+                    ],
+                    # add a top margin to make things look nice when the navbar
+                    # isn't expanded (mt-3) remove the margin on medium or
+                    # larger screens (mt-md-0) when the navbar is expanded.
+                    # keep button and search box on same row (flex-nowrap).
+                    # align everything on the right with left margin (ms-auto).
+                    className="g-0 ms-auto flex-nowrap mt-3 mt-md-0",
+                    align="center",
+                ),
+                id="navbar-collapse3",
+                navbar=True,
+            ),
+        ]
+    ),
+    className="mb-5",
+    color='dark',
+    dark=True
 )
 
-content = html.Div(id="page-content", style=CONTENT_STYLE)
+app = Dash(__name__, external_stylesheets=[dbc.themes.JOURNAL])
+app.title = 'Financial Analysis'
+app.layout = html.Div([
+    search_navbar,
+    html.Div(children=[
+        dcc.Dropdown(df.columns[13:], id='metric-dropdown', placeholder='Select a metric'),
+        html.Br(),
+        dcc.Graph(id='figure1'),
+        html.Hr(),
+        dcc.Graph(id='price-graph'),
+    ], style={'margin-left':'10px'})
+])
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content, my_container])
-
-
-@app.callback(Output('ticker-graph1', 'figure'), Input('ticker-dropdown', 'value'))
-def render_ticker_graph1(ticker):
-    mask = df['Ticker'] == ticker
-    tmp = df[mask]
-    return px.bar(tmp, x='Year', y='Revenues')
-
-
-@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
-def render_page_content(pathname):
-    if pathname == "/":
-        return (html.P("This is the content of the home page!"), my_container)
-
-    elif pathname == "/page-1":
-        return html.P("This is the content of page 1. Yay!")
-    elif pathname == "/page-2":
-        return html.P("Oh cool, this is page 2!")
-    # If the user tries to reach a different page, return a 404 message
-    return dbc.Jumbotron(
-        [
-            html.H1("404: Not found", className="text-danger"),
-            html.Hr(),
-            html.P(f"The pathname {pathname} was not recognised..."),
-        ]
-    )
-
+@app.callback(Output('figure1', 'figure'), Output('price-graph', 'figure'),
+              Input('ticker-dropdown', 'value'), Input('metric-dropdown', 'value'),
+              prevent_initial_call=True)
+def render_figure1(ticker, metric):
+    price = yf.download(ticker).reset_index()
+    fig1 = px.bar(df[df['Ticker']==ticker], x='Year', y=metric)
+    fig1.update_xaxes(range=[2000,2020], title_text='')
+    fig1.update_yaxes(title_text='')
+    price_fig = px.line(price, x='Date', y='Adj Close', log_y=True)
+    price_fig.update_yaxes(tickformat='.2f', title_text='')
+    price_fig.update_xaxes(title_text='Year')
+    return fig1, price_fig
 
 if __name__ == "__main__":
     app.run_server(debug=True, port=8888)
+
+
+### Notes
+
+'''
+dff = df[df['Ticker']==ticker]
+fig = make_subplots(rows=2, cols=1)
+fig.add_trace(go.Scatter(x=price['Date'], y=price['Adj Close']), row=1, col=1)
+fig.add_trace(go.Bar(x=dff['Year'], y=dff['Revenues']), row=2, col=1)
+fig.layout.height = 900
+fig.update_yaxes(type='log')
+
+
+
+
+'''
