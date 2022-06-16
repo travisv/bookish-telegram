@@ -5,18 +5,29 @@ def clean_data(path):
     initial cleaning'''
 
     df = pd.read_csv(path)
+    # remove TTM values in order to handle the year variable created next
     df = df[df['period_end_date'] != 'TTM']
     df['year'] = pd.DatetimeIndex(df['period_end_date']).year
+    # replace '-' values with zero so columns can be converted to numeric
     df = df.replace('-', 0)
-
+    # convert columns to numeric if possible for future calculations
     for col in df.columns:
         try:
             df[col] = pd.to_numeric(df[col])
         except:
             pass
+
     return df
 
-AVGERAGE_COLUMNS = [
+def annualize_industries(df):
+    grouped = df.groupby(['industry', 'year'])
+    avg = grouped.mean()[AVERAGE_COLUMNS]
+    tot = grouped.sum()[TOTAL_COLUMNS]
+    dff = pd.concat([tot, avg], axis=1)
+    return dff
+
+# columns to use for mean after grouping
+AVERAGE_COLUMNS = [
 'price_to_earnings',
 'price_to_book',
 'price_to_sales',
@@ -129,6 +140,7 @@ AVGERAGE_COLUMNS = [
 ]
 
 
+# columns to use for sum after grouping
 TOTAL_COLUMNS = [
 'revenue',
 'cogs',
@@ -249,6 +261,7 @@ TOTAL_COLUMNS = [
 'tangible_book_value'
 ]
 
+#  to use for sum after grouping
 ALL_COLUMNS = [
 'symbol',
 'qfs_symbol',
